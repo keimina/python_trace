@@ -468,6 +468,7 @@ class Trace:
         @param outfile file in which to write the results
         @param timing true iff timing information be displayed
         """
+        self.previous_lineno = None
         self.infile = infile
         self.outfile = outfile
         self.ignore = Ignore(ignoremods, ignoredirs)
@@ -593,7 +594,8 @@ class Trace:
         If the code block being entered is to be ignored, returns `None',
         else returns self.localtrace.
         """
-        if why == 'call':
+        if why == 'call' and self.previous_lineno != frame.f_lineno:
+            self.previous_lineno = frame.f_lineno
             code = frame.f_code
             filename = frame.f_globals.get('__file__', None)
             if filename:
@@ -615,14 +617,16 @@ class Trace:
             # record the file name and line number of every trace
             filename = frame.f_code.co_filename
             lineno = frame.f_lineno
-            key = filename, lineno
-            self.counts[key] = self.counts.get(key, 0) + 1
-
-            if self.start_time:
-                print '%.2f' % (time.time() - self.start_time),
-            bname = os.path.basename(filename)
-            print "%s(%d): %s" % (bname, lineno,
-                                  linecache.getline(filename, lineno)),
+            if self.previous_lineno != lineno:
+                key = filename, lineno
+                self.counts[key] = self.counts.get(key, 0) + 1
+    
+                if self.start_time:
+                    print '%.2f' % (time.time() - self.start_time),
+                bname = os.path.basename(filename)
+                print "%s(%d): %s" % (bname, lineno,
+                                      linecache.getline(filename, lineno)),
+            self.previous_lineno = lineno
         return self.localtrace
 
     def localtrace_trace(self, frame, why, arg):
@@ -642,8 +646,10 @@ class Trace:
         if why == "line":
             filename = frame.f_code.co_filename
             lineno = frame.f_lineno
-            key = filename, lineno
-            self.counts[key] = self.counts.get(key, 0) + 1
+            if self.previous_lineno != lineno:
+                key = filename, lineno
+                self.counts[key] = self.counts.get(key, 0) + 1
+            self.previous_lineno = lineno
         return self.localtrace
 
     def results(self):
