@@ -1,3 +1,1 @@
-# python_trace
-# python_trace
-# python_trace
+標準モジュール python_trace.py の修正
